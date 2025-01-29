@@ -9,15 +9,16 @@ const createUserRoutes = require("./routes/createUser");
 const getPaymentsList = require("./routes/getPaymentsList");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
+// Настройка CORS
 const corsOptions = {
-  origin: "*", //  или ваш домен фронтенда, e.g., 'http://localhost:5173',
+  origin: "*",
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
   optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
+
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(paymentRoutes);
@@ -58,6 +59,4 @@ app.get("/api/hello", (req, res) => {
   res.json({ message: "Привет!" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Убираем app.listen
