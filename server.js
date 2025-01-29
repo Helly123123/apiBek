@@ -9,7 +9,7 @@ const createUserRoutes = require("./routes/createUser");
 const getPaymentsList = require("./routes/getPaymentsList");
 
 const app = express();
-
+const PORT = process.env.PORT || 3000;
 // Настройка CORS
 const corsOptions = {
   origin: "*",
@@ -59,4 +59,6 @@ app.get("/api/hello", (req, res) => {
   res.json({ message: "Привет!" });
 });
 
-// Убираем app.listen
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
