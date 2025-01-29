@@ -47,6 +47,11 @@ app.get("/api/payments", async (req, res) => {
   }
 });
 
+// Новый GET-запрос
+app.get("/api/hello", (req, res) => {
+  res.json({ message: "Привет!" });
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
