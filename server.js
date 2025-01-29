@@ -11,7 +11,13 @@ const getPaymentsList = require("./routes/getPaymentsList");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+const corsOptions = {
+  origin: "*", //  или ваш домен фронтенда, e.g., 'http://localhost:5173',
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(paymentRoutes);
