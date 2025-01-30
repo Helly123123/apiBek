@@ -5,7 +5,6 @@ const connection = mysql.createPool({
   host: process.env.MYSQL_HOST,
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE,
   port: process.env.MYSQL_PORT,
   connectionLimit: 10,
 });
@@ -27,16 +26,13 @@ const initDatabase = async () => {
         .promise()
         .query(`CREATE DATABASE IF NOT EXISTS ${process.env.MYSQL_DATABASE}`);
       console.log("База данных создана успешно!");
-
-      await connection.promise().query(`USE ${process.env.MYSQL_DATABASE}`);
-      console.log("Подключились к новой базе данных");
     } else {
-      console.log(
-        `База данных ${process.env.MYSQL_DATABASE} существует, подключаемся...`
-      );
-      await connection.promise().query(`USE ${process.env.MYSQL_DATABASE}`);
-      console.log(`Подключились к базе данных ${process.env.MYSQL_DATABASE}`);
+      console.log(`База данных ${process.env.MYSQL_DATABASE} существует`);
     }
+
+    // Подключаемся к созданной базе данных
+    await connection.promise().query(`USE ${process.env.MYSQL_DATABASE}`);
+    console.log(`Подключились к базе данных ${process.env.MYSQL_DATABASE}`);
 
     // Проверяем, существует ли таблица payments
     const [tableCheckResult] = await connection
@@ -46,17 +42,17 @@ const initDatabase = async () => {
     if (tableCheckResult.length === 0) {
       console.log("Таблица payments не существует, создаем...");
       await connection.promise().query(`
-          CREATE TABLE IF NOT EXISTS payments (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id VARCHAR(255) NOT NULL,
-            payment_method VARCHAR(255) NOT NULL,
-            amount DECIMAL(10, 2) NOT NULL,
-            currency VARCHAR(3) NOT NULL,
-            payment_id VARCHAR(255) NOT NULL,
-            status VARCHAR(50) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
+              CREATE TABLE IF NOT EXISTS payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id VARCHAR(255) NOT NULL,
+                payment_method VARCHAR(255) NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                currency VARCHAR(3) NOT NULL,
+                payment_id VARCHAR(255) NOT NULL,
+                status VARCHAR(50) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              )
+            `);
       console.log("Таблица payments создана успешно!");
     } else {
       console.log("Таблица payments уже существует.");
