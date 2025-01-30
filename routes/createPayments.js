@@ -36,7 +36,7 @@ router.post("/api/create_payment", async (req, res) => {
   console.log("Запрос на создание платежа:", req.body);
 
   const { amount, currency } = req.body;
-  const token = req.headers["authorization"]; // Получаем токен из заголовка
+  const token = req.headers["authorization"]?.split(" ")[1];
 
   if (!amount || !currency || !token) {
     console.log("Ошибка: Необходимы параметры amount, currency и token");
@@ -47,7 +47,6 @@ router.post("/api/create_payment", async (req, res) => {
 
   try {
     const uuid = await getUserIdByToken(token);
-    // Здесь мы больше не используем getUserIdByToken
 
     const response = await axios.post(
       "https://api.yookassa.ru/v3/payments",
@@ -58,7 +57,7 @@ router.post("/api/create_payment", async (req, res) => {
         },
         confirmation: {
           type: "redirect",
-          return_url: "https://your-return-url.com", // Замените на ваш URL
+          return_url: "https://your-return-url.com",
         },
         capture: true,
         description: "Payment description",
@@ -102,7 +101,6 @@ router.post("/api/create_payment", async (req, res) => {
       .send({ message: error.message || "Ошибка при создании платежа" });
   }
 });
-
 // router.post("/webhooks/yookassa", async (req, res) => {
 //   try {
 //     console.log("Получен webhook от YooKassa:", req.body);
