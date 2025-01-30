@@ -110,81 +110,27 @@ router.post("/api/create_payment", async (req, res) => {
   }
 });
 
-router.post(
-  "https://hellylo.apitter.com:3000/webhooks/yookassa",
-  async (req, res) => {
-    console.log("Получен webhook от YooKassa:", req.body);
+app.post("https://hellylo.apitter.com:3000/webhooks/yookassa", (req, res) => {
+  const signature = req.headers["yookassa-signature"];
+  const payload = req.body;
 
-    try {
-      const paymentId = req.body.object.id;
-      const status = req.body.object.status;
+  // Здесь должна быть ваша логика проверки подписи (не забудьте добавить)
 
-      if (!paymentId || !status) {
-        console.error("Ошибка: Не найден paymentId или status в webhook");
-        return res
-          .status(400)
-          .json({ message: "Не найден paymentId или status" });
-      }
-
-      console.log(`YooKassa paymentId: ${paymentId}, status: ${status}`);
-
-      const selectPaymentQuery = `
-        SELECT user_id
-        FROM payments
-        WHERE payment_id = ?
-      `;
-
-      connection.query(
-        selectPaymentQuery,
-        [paymentId],
-        async (err, results) => {
-          if (err) {
-            console.error("Ошибка при получении user_id из базы данных:", err);
-            return res
-              .status(500)
-              .json({ message: "Ошибка при получении user_id" });
-          }
-
-          if (results.length === 0) {
-            console.error(
-              "Ошибка: Платеж с данным paymentId не найден в базе данных"
-            );
-            return res.status(404).json({ message: "Платеж не найден" });
-          }
-          const userId = results[0].user_id;
-          console.log("userId from db", userId);
-
-          const updatePaymentQuery = `
-              UPDATE payments
-              SET status = ?
-              WHERE payment_id = ?
-          `;
-
-          connection.query(
-            updatePaymentQuery,
-            [status, paymentId],
-            (err, updateResult) => {
-              if (err) {
-                console.error("Ошибка при обновлении статуса платежа:", err);
-                return res
-                  .status(500)
-                  .json({ message: "Ошибка при обновлении статуса платежа" });
-              }
-              console.log(
-                `Платеж ${paymentId} обновлен успешно. Новый статус: ${status}`
-              );
-              res
-                .status(200)
-                .json({ message: "Статус платежа успешно обновлен" });
-            }
-          );
-        }
-      );
-    } catch (error) {
-      console.error("Ошибка при обработке webhook:", error);
-      res.status(500).json({ message: "Ошибка при обработке webhook" });
-    }
+  // Обработка события
+  switch (payload.event) {
+    case "payment.succeeded":
+      console.log("Платеж успешно прошел:", payload);
+      break;
+    case "payment.failed":
+      console.log("Платеж не прошел:", payload);
+      break;
+    // Добавьте другие события по необходимости
+    default:
+      console.log("Неизвестное событие:", payload.event);
   }
-);
+
+  // Возвращаем 200 OK
+  res.status(200).send();
+});
 
 module.exports = router;
