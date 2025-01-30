@@ -110,30 +110,27 @@ router.post("/api/create_payment", async (req, res) => {
   }
 });
 
-router.post(
-  "https://hellylo.apitter.com:3000/webhooks/yookassa",
-  (req, res) => {
-    const signature = req.headers["yookassa-signature"];
-    const payload = req.body;
+router.post("https://hellylo.apitter.com/webhooks/yookassa", (req, res) => {
+  const signature = req.headers["yookassa-signature"];
+  const payload = req.body;
 
-    // Здесь должна быть ваша логика проверки подписи (не забудьте добавить)
+  // Здесь должна быть ваша логика проверки подписи (не забудьте добавить)
 
-    // Обработка события
-    switch (payload.event) {
-      case "payment.succeeded":
-        console.log("Платеж успешно прошел:", payload);
-        break;
-      case "payment.failed":
-        console.log("Платеж не прошел:", payload);
-        break;
-      // Добавьте другие события по необходимости
-      default:
-        console.log("Неизвестное событие:", payload.event);
-    }
-
-    // Возвращаем 200 OK
-    res.status(200).send();
+  // Обработка события
+  switch (payload.event) {
+    case "payment.succeeded":
+      console.log("Платеж успешно прошел:", payload);
+      break;
+    case "payment.failed":
+      console.log("Платеж не прошел:", payload);
+      break;
+    // Добавьте другие события по необходимости
+    default:
+      console.log("Неизвестное событие:", payload.event);
   }
-);
+
+  // Возвращаем 200 OK
+  res.status(200).send();
+});
 
 module.exports = router;
