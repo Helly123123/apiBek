@@ -62,12 +62,6 @@ const initDatabase = async () => {
   }
 };
 
-initDatabase()
-  .then(() => {
-    console.log("Инициализация базы данных завершена успешно!");
-  })
-  .catch((error) => {
-    console.error("Инициализация базы данных завершилась с ошибкой:", error);
-  });
+initDatabase();
 
 module.exports = connection;

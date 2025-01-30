@@ -36,15 +36,7 @@ router.post("/api/create_payment", async (req, res) => {
   console.log("Запрос на создание платежа:", req.body);
 
   const { amount, currency } = req.body;
-  let token = req.headers["authorization"];
-
-  if (!token) {
-    console.log("Ошибка: Токен не найден в заголовке Authorization");
-    return res
-      .status(400)
-      .send({ message: "Необходимы параметры amount, currency и token" });
-  }
-  token = token.split(" ")[1];
+  const token = req.headers["authorization"]?.split(" ")[1];
 
   if (!amount || !currency || !token) {
     console.log("Ошибка: Необходимы параметры amount, currency и token");
