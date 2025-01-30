@@ -33,6 +33,30 @@ const getUserIdByToken = async (token) => {
   }
 };
 
+// Функция для создания вебхука
+const createYookassaWebhook = async () => {
+  try {
+    const response = await axios.post(
+      "https://api.yookassa.ru/v3/webhooks",
+      {
+        event: "payment.succeeded",
+        url: webhookUrl,
+      },
+      {
+        headers: {
+          Authorization: getBasicAuthHeader(SHOP_ID, SECRET_KEY),
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log("Вебхук YooKassa успешно создан:", response.data);
+    return { success: true };
+  } catch (error) {
+    console.error("Ошибка при создании вебхука:", error);
+    return { success: false, error: error.message || error };
+  }
+};
+
 router.post("/api/create_payment", async (req, res) => {
   console.log("Запрос на создание платежа:", req.body);
 
@@ -89,7 +113,7 @@ router.post("/api/create_payment", async (req, res) => {
     connection.query(
       "INSERT INTO payments (user_id, payment_method, amount, currency, payment_id, status) VALUES (?, ?, ?, ?, ?, ?)",
       [uuid, "YooKassa", amount, currency, paymentId, status],
-      (err) => {
+      async (err) => {
         if (err) {
           console.error("Ошибка при сохранении платежа:", err);
           return res
@@ -97,10 +121,25 @@ router.post("/api/create_payment", async (req, res) => {
             .send({ message: "Ошибка при сохранении платежа" });
         }
 
-        res.status(200).json({
-          message: "Платеж успешно создан",
-          link: link,
-        });
+        // Вызываем создание вебхука
+        const webhookResult = await createYookassaWebhook();
+        if (webhookResult.success) {
+          console.log("Вебхук успешно создан после платежа");
+          res.status(200).json({
+            message: "Платеж успешно создан",
+            link: link,
+          });
+        } else {
+          console.error(
+            "Ошибка при создании вебхука после платежа",
+            webhookResult.error
+          );
+          res.status(200).json({
+            message: "Платеж успешно создан, но вебхук не был создан",
+            link: link,
+            webhookError: webhookResult.error,
+          });
+        }
       }
     );
   } catch (error) {
@@ -108,34 +147,6 @@ router.post("/api/create_payment", async (req, res) => {
     res
       .status(500)
       .send({ message: error.message || "Ошибка при создании платежа" });
-  }
-});
-
-// Добавляем метод для создания вебхука
-router.post("/api/create_yookassa_webhook", async (req, res) => {
-  try {
-    const response = await axios.post(
-      "https://api.yookassa.ru/v3/webhooks",
-      {
-        event: "payment.succeeded",
-        url: webhookUrl,
-      },
-      {
-        headers: {
-          Authorization: getBasicAuthHeader(SHOP_ID, SECRET_KEY),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    console.log("Вебхук YooKassa успешно создан:", response.data);
-    res.status(200).json({ message: "Вебхук YooKassa успешно создан" });
-  } catch (error) {
-    console.error("Ошибка при создании вебхука:", error);
-    res.status(500).json({
-      message: "Ошибка при создании вебхука",
-      error: error.message || error,
-    });
   }
 });
 
