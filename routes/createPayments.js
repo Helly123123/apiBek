@@ -110,72 +110,81 @@ router.post("/api/create_payment", async (req, res) => {
   }
 });
 
-router.post("/webhooks/yookassa", async (req, res) => {
-  console.log("Получен webhook от YooKassa:", req.body);
+router.post(
+  "https://hellylo.apitter.com:3000/webhooks/yookassa",
+  async (req, res) => {
+    console.log("Получен webhook от YooKassa:", req.body);
 
-  try {
-    const paymentId = req.body.object.id;
-    const status = req.body.object.status;
+    try {
+      const paymentId = req.body.object.id;
+      const status = req.body.object.status;
 
-    if (!paymentId || !status) {
-      console.error("Ошибка: Не найден paymentId или status в webhook");
-      return res
-        .status(400)
-        .json({ message: "Не найден paymentId или status" });
-    }
+      if (!paymentId || !status) {
+        console.error("Ошибка: Не найден paymentId или status в webhook");
+        return res
+          .status(400)
+          .json({ message: "Не найден paymentId или status" });
+      }
 
-    console.log(`YooKassa paymentId: ${paymentId}, status: ${status}`);
+      console.log(`YooKassa paymentId: ${paymentId}, status: ${status}`);
 
-    const selectPaymentQuery = `
+      const selectPaymentQuery = `
         SELECT user_id
         FROM payments
         WHERE payment_id = ?
       `;
 
-    connection.query(selectPaymentQuery, [paymentId], async (err, results) => {
-      if (err) {
-        console.error("Ошибка при получении user_id из базы данных:", err);
-        return res
-          .status(500)
-          .json({ message: "Ошибка при получении user_id" });
-      }
+      connection.query(
+        selectPaymentQuery,
+        [paymentId],
+        async (err, results) => {
+          if (err) {
+            console.error("Ошибка при получении user_id из базы данных:", err);
+            return res
+              .status(500)
+              .json({ message: "Ошибка при получении user_id" });
+          }
 
-      if (results.length === 0) {
-        console.error(
-          "Ошибка: Платеж с данным paymentId не найден в базе данных"
-        );
-        return res.status(404).json({ message: "Платеж не найден" });
-      }
-      const userId = results[0].user_id;
-      console.log("userId from db", userId);
+          if (results.length === 0) {
+            console.error(
+              "Ошибка: Платеж с данным paymentId не найден в базе данных"
+            );
+            return res.status(404).json({ message: "Платеж не найден" });
+          }
+          const userId = results[0].user_id;
+          console.log("userId from db", userId);
 
-      const updatePaymentQuery = `
+          const updatePaymentQuery = `
               UPDATE payments
               SET status = ?
               WHERE payment_id = ?
           `;
 
-      connection.query(
-        updatePaymentQuery,
-        [status, paymentId],
-        (err, updateResult) => {
-          if (err) {
-            console.error("Ошибка при обновлении статуса платежа:", err);
-            return res
-              .status(500)
-              .json({ message: "Ошибка при обновлении статуса платежа" });
-          }
-          console.log(
-            `Платеж ${paymentId} обновлен успешно. Новый статус: ${status}`
+          connection.query(
+            updatePaymentQuery,
+            [status, paymentId],
+            (err, updateResult) => {
+              if (err) {
+                console.error("Ошибка при обновлении статуса платежа:", err);
+                return res
+                  .status(500)
+                  .json({ message: "Ошибка при обновлении статуса платежа" });
+              }
+              console.log(
+                `Платеж ${paymentId} обновлен успешно. Новый статус: ${status}`
+              );
+              res
+                .status(200)
+                .json({ message: "Статус платежа успешно обновлен" });
+            }
           );
-          res.status(200).json({ message: "Статус платежа успешно обновлен" });
         }
       );
-    });
-  } catch (error) {
-    console.error("Ошибка при обработке webhook:", error);
-    res.status(500).json({ message: "Ошибка при обработке webhook" });
+    } catch (error) {
+      console.error("Ошибка при обработке webhook:", error);
+      res.status(500).json({ message: "Ошибка при обработке webhook" });
+    }
   }
-});
+);
 
 module.exports = router;
