@@ -24,9 +24,22 @@ const getUserIdByToken = async (token) => {
 
 router.get("/paymentsList", async (req, res) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader;
+  let token;
   console.log("Полный заголовок Authorization:", authHeader);
-  console.log("Токен:", token);
+
+  if (authHeader) {
+    const parts = authHeader.split(" ");
+    if (parts.length === 2 && parts[0] === "Bearer") {
+      token = parts[1];
+      console.log("Токен:", token);
+    } else {
+      console.log("Ошибка: Некорректный формат токена");
+      return res.status(401).json({ message: "Некорректный формат токена" });
+    }
+  } else {
+    console.log("Ошибка: Токен не предоставлен");
+    return res.status(401).json({ message: "Токен не предоставлен" });
+  }
 
   if (!token) {
     return res.status(401).json({ message: "Токен не предоставлен" });
