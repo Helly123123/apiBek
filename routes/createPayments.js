@@ -110,27 +110,46 @@ router.post("/api/create_payment", async (req, res) => {
   }
 });
 
-router.post("https://hellylo.apitter.com/webhooks/yookassa", (req, res) => {
-  const signature = req.headers["yookassa-signature"];
-  const payload = req.body;
+router.post(
+  "https://hellylo.apitter.com/webhooks/yookassa",
+  async (req, res) => {
+    const { event, object } = req.body;
 
-  // Здесь должна быть ваша логика проверки подписи (не забудьте добавить)
+    if (!event || !object) {
+      console.log("Ошибка: Неверный формат данных вебхука");
+      return res.status(400).send({ message: "Неверный формат данных" });
+    }
 
-  // Обработка события
-  switch (payload.event) {
-    case "payment.succeeded":
-      console.log("Платеж успешно прошел:", payload);
-      break;
-    case "payment.failed":
-      console.log("Платеж не прошел:", payload);
-      break;
-    // Добавьте другие события по необходимости
-    default:
-      console.log("Неизвестное событие:", payload.event);
+    // Логируем полученные данные для отладки
+    console.log("Получен вебхук:", req.body);
+
+    // Обработка события "payment.succeeded"
+    if (event === "payment.succeeded") {
+      const paymentId = object.id;
+      const status = object.status;
+
+      // Здесь вы можете обновить статус платежа в вашей базе данных
+      connection.query(
+        "UPDATE payments SET status = ? WHERE payment_id = ?",
+        [status, paymentId],
+        (err) => {
+          if (err) {
+            console.error("Ошибка при обновлении статуса платежа:", err);
+            return res
+              .status(500)
+              .send({ message: "Ошибка при обновлении статуса" });
+          }
+
+          console.log(
+            `Статус платежа обновлен: ${paymentId}, новый статус: ${status}`
+          );
+        }
+      );
+    }
+
+    // Возвращаем 200 OK, чтобы подтвердить получение вебхука
+    res.status(200).send({ message: "Webhook received" });
   }
-
-  // Возвращаем 200 OK
-  res.status(200).send();
-});
+);
 
 module.exports = router;
