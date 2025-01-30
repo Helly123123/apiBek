@@ -46,73 +46,53 @@ router.post("/api/create_payment", async (req, res) => {
   }
 
   try {
-    const uuid = await getUserIdByToken(token); // Получаем UUID
+    const uuid = await getUserIdByToken(token);
+    // Здесь мы больше не используем getUserIdByToken
 
-    if (!uuid) {
-      console.log("Ошибка: UUID не получен");
-      return res.status(404).send({ message: "Ошибка: UUID не получен" });
-    }
-    console.log(`UUID получен: ${uuid}`);
+    const response = await axios.post(
+      "https://api.yookassa.ru/v3/payments",
+      {
+        amount: {
+          value: amount,
+          currency: currency,
+        },
+        confirmation: {
+          type: "redirect",
+          return_url: "https://your-return-url.com", // Замените на ваш URL
+        },
+        capture: true,
+        description: "Payment description",
+      },
+      {
+        headers: {
+          Authorization: getBasicAuthHeader(SHOP_ID, SECRET_KEY),
+          "Content-Type": "application/json",
+          "Idempotence-Key": uuidv4(),
+        },
+      }
+    );
+
+    const paymentId = response.data.id;
+    const status = response.data.status;
+    const link = response.data.confirmation.confirmation_url;
+
+    console.log(`Платеж успешно создан: ${paymentId}, статус: ${status}`);
 
     connection.query(
-      "SELECT id FROM users WHERE token = ?",
-      [uuid],
-      async (err, results) => {
-        // Use uuid here instead of token
-        if (err || results.length === 0) {
-          console.log("Ошибка: Пользователь не найден");
-          return res.status(404).send({ message: "Пользователь не найден" });
+      "INSERT INTO payments (user_id, payment_method, amount, currency, payment_id, status) VALUES (?, ?, ?, ?, ?, ?)",
+      [uuid, "YooKassa", amount, currency, paymentId, status],
+      (err) => {
+        if (err) {
+          console.error("Ошибка при сохранении платежа:", err);
+          return res
+            .status(500)
+            .send({ message: "Ошибка при сохранении платежа" });
         }
 
-        const userId = results[0].id;
-        console.log(`Пользователь найден: ${userId}`);
-
-        const response = await axios.post(
-          "https://api.yookassa.ru/v3/payments",
-          {
-            amount: {
-              value: amount,
-              currency: currency,
-            },
-            confirmation: {
-              type: "redirect",
-              return_url: "https://your-return-url.com", // Замените на ваш URL
-            },
-            capture: true,
-            description: "Payment description",
-          },
-          {
-            headers: {
-              Authorization: getBasicAuthHeader(SHOP_ID, SECRET_KEY),
-              "Content-Type": "application/json",
-              "Idempotence-Key": uuidv4(),
-            },
-          }
-        );
-
-        const paymentId = response.data.id;
-        const status = response.data.status;
-        const link = response.data.confirmation.confirmation_url;
-
-        console.log(`Платеж успешно создан: ${paymentId}, статус: ${status}`);
-
-        connection.query(
-          "INSERT INTO payments (user_id, payment_method, amount, currency, payment_id, status) VALUES (?, ?, ?, ?, ?, ?)",
-          [userId, "YooKassa", amount, currency, paymentId, status],
-          (err) => {
-            if (err) {
-              console.error("Ошибка при сохранении платежа:", err);
-              return res
-                .status(500)
-                .send({ message: "Ошибка при сохранении платежа" });
-            }
-
-            res.status(200).json({
-              message: "Платеж успешно создан",
-              link: link,
-            });
-          }
-        );
+        res.status(200).json({
+          message: "Платеж успешно создан",
+          link: link,
+        });
       }
     );
   } catch (error) {
@@ -123,39 +103,39 @@ router.post("/api/create_payment", async (req, res) => {
   }
 });
 
-router.post("/webhooks/yookassa", async (req, res) => {
-  try {
-    console.log("Получен webhook от YooKassa:", req.body);
-    const paymentData = req.body;
+// router.post("/webhooks/yookassa", async (req, res) => {
+//   try {
+//     console.log("Получен webhook от YooKassa:", req.body);
+//     const paymentData = req.body;
 
-    if (paymentData.event !== "payment.succeeded") {
-      console.log(`Платеж не успешен, статус: ${paymentData.event}`);
-      return res.status(200).send("OK");
-    }
+//     if (paymentData.event !== "payment.succeeded") {
+//       console.log(`Платеж не успешен, статус: ${paymentData.event}`);
+//       return res.status(200).send("OK");
+//     }
 
-    const paymentId = paymentData.object.id;
-    const status = paymentData.object.status;
+//     const paymentId = paymentData.object.id;
+//     const status = paymentData.object.status;
 
-    console.log(`Обновление платежа: ${paymentId}, новый статус: ${status}`);
+//     console.log(`Обновление платежа: ${paymentId}, новый статус: ${status}`);
 
-    connection.query(
-      "UPDATE payments SET status = ? WHERE payment_id = ?",
-      [status, paymentId],
-      (err) => {
-        if (err) {
-          console.error("Ошибка при обновлении статуса платежа:", err);
-          return res.status(500).send("Error"); // Notifies that we failed to handle the request
-        }
-        console.log(`Платеж: ${paymentId} статус обновлен`);
-        res.status(200).send("OK");
-      }
-    );
-  } catch (error) {
-    console.error("Ошибка при обработке webhook:", error);
-    res
-      .status(500)
-      .send({ message: error.message || "Ошибка при обработке webhook" });
-  }
-});
+//     connection.query(
+//       "UPDATE payments SET status = ? WHERE payment_id = ?",
+//       [status, paymentId],
+//       (err) => {
+//         if (err) {
+//           console.error("Ошибка при обновлении статуса платежа:", err);
+//           return res.status(500).send("Error"); // Notifies that we failed to handle the request
+//         }
+//         console.log(`Платеж: ${paymentId} статус обновлен`);
+//         res.status(200).send("OK");
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Ошибка при обработке webhook:", error);
+//     res
+//       .status(500)
+//       .send({ message: error.message || "Ошибка при обработке webhook" });
+//   }
+// });
 
 module.exports = router;
