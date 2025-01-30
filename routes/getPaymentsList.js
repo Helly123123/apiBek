@@ -23,8 +23,8 @@ const getUserIdByToken = async (token) => {
 };
 
 router.get("/paymentsList", async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(" ")[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader;
   console.log("Полный заголовок Authorization:", authHeader);
   console.log("Токен:", token);
 
