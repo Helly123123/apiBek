@@ -25,7 +25,7 @@ const getUserIdByToken = async (token) => {
 
 router.post("/createUser", async (req, res) => {
   const { userName } = req.body;
-  const token = req.headers.authorization?.split(" ")[1];
+  const token = req.headers["authorization"];
 
   if (!userName || !token) {
     return res
