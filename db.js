@@ -1,7 +1,7 @@
 const mysql = require("mysql2");
 require("dotenv").config();
 
-const connection = mysql.createConnection({
+const connection = mysql.createPool({
   host: process.env.MYSQL_HOST,
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
@@ -10,30 +10,42 @@ const connection = mysql.createConnection({
   connectionLimit: 10,
 });
 
-connection.connect((err) => {
-  if (err) {
-    console.error("Ошибка подключения к базе данных:", err);
-    return;
-  }
-  console.log("Подключение к MySQL успешно!");
+// Функция для создания базы данных и таблицы (если их нет)
+const initDatabase = async () => {
+  try {
+    // Проверяем, есть ли база данных
+    const [databaseCheckResult] = await connection
+      .promise()
+      .query(
+        "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?",
+        [process.env.MYSQL_DATABASE]
+      );
 
-  const createDatabaseQuery = "CREATE DATABASE IF NOT EXISTS payments";
-  connection.query(createDatabaseQuery, (err, result) => {
-    if (err) {
-      console.error("Ошибка при создании базы данных:", err);
-      return;
+    if (databaseCheckResult.length === 0) {
+      console.log("База данных не существует, создаем...");
+      await connection
+        .promise()
+        .query(`CREATE DATABASE IF NOT EXISTS ${process.env.MYSQL_DATABASE}`);
+      console.log("База данных создана успешно!");
+
+      await connection.promise().query(`USE ${process.env.MYSQL_DATABASE}`);
+      console.log("Подключились к новой базе данных");
+    } else {
+      console.log(
+        `База данных ${process.env.MYSQL_DATABASE} существует, подключаемся...`
+      );
+      await connection.promise().query(`USE ${process.env.MYSQL_DATABASE}`);
+      console.log(`Подключились к базе данных ${process.env.MYSQL_DATABASE}`);
     }
-    console.log("База данных создана или уже существует.");
 
-    connection.changeUser({ database: "payments" }, (err) => {
-      if (err) {
-        console.error("Ошибка при подключении к базе данных:", err);
-        return;
-      }
-      console.log("Подключение к базе данных успешно!");
+    // Проверяем, существует ли таблица payments
+    const [tableCheckResult] = await connection
+      .promise()
+      .query("SHOW TABLES LIKE 'payments'");
 
-      // Создаем таблицу payments, если она не существует
-      const createPaymentsTableQuery = `
+    if (tableCheckResult.length === 0) {
+      console.log("Таблица payments не существует, создаем...");
+      await connection.promise().query(`
           CREATE TABLE IF NOT EXISTS payments (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id VARCHAR(255) NOT NULL,
@@ -44,16 +56,16 @@ connection.connect((err) => {
             status VARCHAR(50) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
-        `;
-      connection.query(createPaymentsTableQuery, (err, result) => {
-        if (err) {
-          console.error("Ошибка при создании таблицы payments:", err);
-          return;
-        }
-        console.log("Таблица payments создана или уже существует.");
-      });
-    });
-  });
-});
+        `);
+      console.log("Таблица payments создана успешно!");
+    } else {
+      console.log("Таблица payments уже существует.");
+    }
+  } catch (err) {
+    console.error("Ошибка при инициализации базы данных:", err);
+  }
+};
+
+initDatabase();
 
 module.exports = connection;
