@@ -111,46 +111,70 @@ router.post("/api/create_payment", async (req, res) => {
   }
 });
 
-router.post(
-  "https://hellylo.apitter.com/webhooks/yookassa",
-  async (req, res) => {
-    const { event, object } = req.body;
+router.post("/webhooks/yookassa", async (req, res) => {
+  try {
+    console.log("Получен вебхук от YooKassa:", req.body);
+    const event = req.body;
+    const eventType = event.event;
+    const payment = event.object;
 
-    if (!event || !object) {
-      console.log("Ошибка: Неверный формат данных вебхука");
-      return res.status(400).send({ message: "Неверный формат данных" });
+    if (payment) {
+      const paymentId = payment.id;
+      const status = payment.status;
+
+      // Проверка подписи вебхука (важно для безопасности!)
+      const signature = req.headers["x-request-signature"];
+      if (!signature || !verifyWebhookSignature(event, signature)) {
+        console.error("Неверная подпись вебхука!");
+        return res.status(401).send({ message: "Неверная подпись вебхука" });
+      }
+
+      // Обновление статуса платежа в базе данных
+      await updatePaymentStatus(paymentId, status);
+
+      res.status(200).send({ message: "Вебхук обработан" });
+    } else {
+      console.error("Некорректный формат вебхука!");
+      res.status(400).send({ message: "Некорректный формат вебхука" });
     }
-
-    // Логируем полученные данные для отладки
-    console.log("Получен вебхук:", req.body);
-
-    // Обработка события "payment.succeeded"
-    if (event === "payment.succeeded") {
-      const paymentId = object.id;
-      const status = object.status;
-
-      // Здесь вы можете обновить статус платежа в вашей базе данных
-      connection.query(
-        "UPDATE payments SET status = ? WHERE payment_id = ?",
-        [status, paymentId],
-        (err) => {
-          if (err) {
-            console.error("Ошибка при обновлении статуса платежа:", err);
-            return res
-              .status(500)
-              .send({ message: "Ошибка при обновлении статуса" });
-          }
-
-          console.log(
-            `Статус платежа обновлен: ${paymentId}, новый статус: ${status}`
-          );
-        }
-      );
-    }
-
-    // Возвращаем 200 OK, чтобы подтвердить получение вебхука
-    res.status(200).send({ message: "Webhook received" });
+  } catch (error) {
+    console.error("Ошибка при обработке вебхука:", error);
+    res.status(500).send({ message: "Ошибка при обработке вебхука" });
   }
-);
+});
+
+const verifyWebhookSignature = (event, signature) => {
+  // Замените 'YOUR_SECRET_KEY' на ваш секретный ключ из настроек ЮKassa
+  const secretKey = SECRET_KEY;
+  const computedSignature = crypto
+    .createHmac("sha256", secretKey)
+    .update(JSON.stringify(event))
+    .digest("hex");
+  return computedSignature === signature;
+};
+
+const updatePaymentStatus = async (paymentId, status) => {
+  try {
+    // Найдите запись в базе данных по paymentId
+    const [rows] = await connection
+      .promise()
+      .query("SELECT * FROM payments WHERE payment_id = ?", [paymentId]);
+    if (rows.length === 0) {
+      console.warn(`Платеж с ID ${paymentId} не найден в базе данных`);
+      return;
+    }
+    const payment = rows[0];
+    // Обновите запись в базе данных
+    await connection
+      .promise()
+      .query("UPDATE payments SET status = ? WHERE payment_id = ?", [
+        status,
+        paymentId,
+      ]);
+    console.log(`Статус платежа ${paymentId} обновлен на ${status}`);
+  } catch (error) {
+    console.error("Ошибка при обновлении статуса платежа:", error);
+  }
+};
 
 module.exports = router;
