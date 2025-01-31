@@ -1,12 +1,12 @@
 const express = require("express");
 const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
-const connection = require("../db");
+const connection = require("../db"); // Импортируйте вашу конфигурацию базы данных
 const crypto = require("crypto");
 
 const SHOP_ID = "437408";
 const SECRET_KEY = "test_xB5ui4r1OPr3Sc-WZ-dMgcre2uRzjZ2tFbuoM276wTs";
-const webhookUrl = "https://hellylo.apitter.com/webhooks/yookassa";
+const webhookUrl = "https://your-domain.com/webhooks/yookassa";
 
 const router = express.Router();
 
@@ -30,30 +30,6 @@ const getUserIdByToken = async (token) => {
   } catch (error) {
     console.error("Ошибка при получении UUID:", error);
     throw new Error("Ошибка при получении UUID");
-  }
-};
-
-// Функция для создания вебхука
-const createYookassaWebhook = async () => {
-  try {
-    const response = await axios.post(
-      "https://api.yookassa.ru/v3/webhooks",
-      {
-        event: "payment.succeeded",
-        url: webhookUrl,
-      },
-      {
-        headers: {
-          Authorization: getBasicAuthHeader(SHOP_ID, SECRET_KEY),
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    console.log("Вебхук YooKassa успешно создан:", response.data);
-    return { success: true };
-  } catch (error) {
-    console.error("Ошибка при создании вебхука:", error);
-    return { success: false, error: error.message || error };
   }
 };
 
@@ -113,7 +89,7 @@ router.post("/api/create_payment", async (req, res) => {
     connection.query(
       "INSERT INTO payments (user_id, payment_method, amount, currency, payment_id, status) VALUES (?, ?, ?, ?, ?, ?)",
       [uuid, "YooKassa", amount, currency, paymentId, status],
-      async (err) => {
+      (err) => {
         if (err) {
           console.error("Ошибка при сохранении платежа:", err);
           return res
@@ -121,25 +97,10 @@ router.post("/api/create_payment", async (req, res) => {
             .send({ message: "Ошибка при сохранении платежа" });
         }
 
-        // Вызываем создание вебхука
-        const webhookResult = await createYookassaWebhook();
-        if (webhookResult.success) {
-          console.log("Вебхук успешно создан после платежа");
-          res.status(200).json({
-            message: "Платеж успешно создан",
-            link: link,
-          });
-        } else {
-          console.error(
-            "Ошибка при создании вебхука после платежа",
-            webhookResult.error
-          );
-          res.status(200).json({
-            message: "Платеж успешно создан, но вебхук не был создан",
-            link: link,
-            webhookError: webhookResult.error,
-          });
-        }
+        res.status(200).json({
+          message: "Платеж успешно создан",
+          link: link,
+        });
       }
     );
   } catch (error) {
@@ -149,5 +110,52 @@ router.post("/api/create_payment", async (req, res) => {
       .send({ message: error.message || "Ошибка при создании платежа" });
   }
 });
+
+const client = new Client({
+  SHOP_ID,
+  SECRET_KEY,
+});
+
+router.post(
+  "https://hellylo.apitter.com/webhooks/yookassa",
+  async (req, res) => {
+    const { event, object } = req.body;
+
+    if (!event || !object) {
+      console.log("Ошибка: Неверный формат данных вебхука");
+      return res.status(400).send({ message: "Неверный формат данных" });
+    }
+
+    // Логируем полученные данные для отладки
+    console.log("Получен вебхук:", req.body);
+
+    // Обработка события "payment.succeeded"
+    if (event === "payment.succeeded") {
+      const paymentId = object.id;
+      const status = object.status;
+
+      // Здесь вы можете обновить статус платежа в вашей базе данных
+      connection.query(
+        "UPDATE payments SET status = ? WHERE payment_id = ?",
+        [status, paymentId],
+        (err) => {
+          if (err) {
+            console.error("Ошибка при обновлении статуса платежа:", err);
+            return res
+              .status(500)
+              .send({ message: "Ошибка при обновлении статуса" });
+          }
+
+          console.log(
+            `Статус платежа обновлен: ${paymentId}, новый статус: ${status}`
+          );
+        }
+      );
+    }
+
+    // Возвращаем 200 OK, чтобы подтвердить получение вебхука
+    res.status(200).send({ message: "Webhook received" });
+  }
+);
 
 module.exports = router;

@@ -9,7 +9,7 @@ const createUserRoutes = require("./routes/createUser");
 const getPaymentsList = require("./routes/getPaymentsList");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 80;
 // Настройка CORS
 // const corsOptions = {
 //   origin: "*",
