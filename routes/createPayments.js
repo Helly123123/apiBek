@@ -111,11 +111,6 @@ router.post("/api/create_payment", async (req, res) => {
   }
 });
 
-const client = new Client({
-  SHOP_ID,
-  SECRET_KEY,
-});
-
 router.post(
   "https://hellylo.apitter.com/webhooks/yookassa",
   async (req, res) => {
