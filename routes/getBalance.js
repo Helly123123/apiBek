@@ -14,7 +14,7 @@ const getUserIdByToken = async (token) => {
         },
       }
     );
-    console.log(response.data.uuid, "uiud");
+    console.log(response.data.uuid, "uuid");
     return response.data.uuid;
   } catch (error) {
     console.error("Ошибка при получении UUID:", error);
@@ -22,36 +22,30 @@ const getUserIdByToken = async (token) => {
   }
 };
 
-router.get("/api/total_payments", async (req, res) => {
-  let token = req.headers["authorization"];
+// Эндпоинт для получения суммы платежей
+router.post("/get-payment-sum", async (req, res) => {
+  const token = req.body.token; // Предполагаем, что токен передается в теле запроса
 
   if (!token) {
-    console.log("Ошибка: Токен не найден в заголовке Authorization");
-    return res
-      .status(400)
-      .send({ message: "Необходим токен в заголовке Authorization" });
+    return res.status(400).send("Токен не предоставлен");
   }
-  token = token.split(" ")[1];
-  try {
-    const uuid = await getUserIdByToken(token);
 
+  try {
+    const userId = await getUserIdByToken(token);
+
+    // Запрос для получения суммы платежей
     const [rows] = await connection
       .promise()
       .query(
-        "SELECT SUM(amount) AS total_amount FROM payments WHERE user_id = ?",
-        [uuid]
+        "SELECT SUM(amount) AS totalAmount FROM payments WHERE user_id = ?",
+        [userId]
       );
 
-    let totalAmount = 0;
-    if (rows && rows.length > 0 && rows[0] && rows[0].total_amount) {
-      totalAmount = rows[0].total_amount;
-    }
-    res.status(200).json({ total_amount: totalAmount });
+    const totalAmount = rows[0].totalAmount || 0; // Если нет платежей, возвращаем 0
+    res.json({ totalAmount });
   } catch (error) {
-    console.error("Ошибка при получении суммы платежей:", error);
-    res.status(500).send({
-      message: error.message || "Ошибка при получении суммы платежей",
-    });
+    console.error("Ошибка при обработке запроса:", error);
+    res.status(500).send("Ошибка при обработке запроса");
   }
 });
 
