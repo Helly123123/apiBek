@@ -82,23 +82,24 @@ router.post("/get-payment-sum", async (req, res) => {
   const token = authHeader.split(" ")[1]; // Извлекаем токен из заголовка
 
   try {
-    // Логика для обработки платежа
+    // Здесь вы можете добавить логику для проверки токена и извлечения uuid пользователя
+    const uuid = await getUserIdByToken(token); // Пример функции для получения user_id из токена
+
     const selectPaymentsQuery = `
-        SELECT id, user_id, payment_method, amount, currency, payment_id, status, created_at
-        FROM payments
-        WHERE user_id = ?
-      `;
-    connection.query(selectPaymentsQuery, [token], (err, results) => {
+      SELECT id, user_id, payment_method, amount, currency, payment_id, status, created_at
+      FROM payments
+      WHERE user_id = ?
+    `;
+
+    connection.query(selectPaymentsQuery, [uuid], (err, results) => {
       if (err) {
         console.error("Ошибка при получении данных о платежах:", err);
         return res.status(500).send({ message: "Ошибка при получении данных" });
       }
       return res.status(200).json(results);
     });
-
-    res.json({ totalAmount });
   } catch (error) {
-    console.error("Ошибка при получении суммы платежей:", error);
+    console.error("Ошибка при обработке запроса:", error);
     res.status(500).json({ message: "Ошибка сервера" });
   }
 });
