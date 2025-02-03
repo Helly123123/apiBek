@@ -79,7 +79,7 @@ const getUserIdByToken = async (token) => {
   }
 };
 
-router.get("/total_payments", async (req, res) => {
+app.get("/total_payments", async (req, res) => {
   let token = req.headers["authorization"];
 
   if (!token) {
