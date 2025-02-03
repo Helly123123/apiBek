@@ -49,11 +49,9 @@ router.get("/api/total_payments", async (req, res) => {
     res.status(200).json({ total_amount: totalAmount });
   } catch (error) {
     console.error("Ошибка при получении суммы платежей:", error);
-    res
-      .status(500)
-      .send({
-        message: error.message || "Ошибка при получении суммы платежей",
-      });
+    res.status(500).send({
+      message: error.message || "Ошибка при получении суммы платежей",
+    });
   }
 });
 
