@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 const paymentRoutes = require("./routes/createPayments");
 const createUserRoutes = require("./routes/createUser");
 const getPaymentsList = require("./routes/getPaymentsList");
-
+const getBalance = require("./routes/getBalance");
 const app = express();
 const PORT = process.env.PORT || 80;
 // Настройка CORS
@@ -24,6 +24,7 @@ app.use(express.json());
 app.use(paymentRoutes);
 app.use(createUserRoutes);
 app.use(getPaymentsList);
+app.use(getBalance);
 const SHOP_ID = "437408";
 const SECRET_KEY = "test_xB5ui4r1OPr3Sc-WZ-dMgcre2uRzjZ2tFbuoM276wTs";
 
