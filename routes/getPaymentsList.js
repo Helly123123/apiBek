@@ -83,7 +83,18 @@ router.post("/get-payment-sum", async (req, res) => {
 
   try {
     // Логика для обработки платежа
-    const totalAmount = await calculatePaymentSum(token); // Пример функции
+    const selectPaymentsQuery = `
+        SELECT id, user_id, payment_method, amount, currency, payment_id, status, created_at
+        FROM payments
+        WHERE user_id = ?
+      `;
+    connection.query(selectPaymentsQuery, [token], (err, results) => {
+      if (err) {
+        console.error("Ошибка при получении данных о платежах:", err);
+        return res.status(500).send({ message: "Ошибка при получении данных" });
+      }
+      return res.status(200).json(results);
+    });
 
     res.json({ totalAmount });
   } catch (error) {
