@@ -22,7 +22,7 @@ const getUserIdByToken = async (token) => {
   }
 };
 
-router.get("/total_payments", async (req, res) => {
+router.get("/api/total_payments", async (req, res) => {
   let token = req.headers["authorization"];
 
   if (!token) {
@@ -42,14 +42,18 @@ router.get("/total_payments", async (req, res) => {
         [uuid]
       );
 
-    const totalAmount = rows[0]?.total_amount || 0;
-
+    let totalAmount = 0;
+    if (rows && rows.length > 0 && rows[0] && rows[0].total_amount) {
+      totalAmount = rows[0].total_amount;
+    }
     res.status(200).json({ total_amount: totalAmount });
   } catch (error) {
     console.error("Ошибка при получении суммы платежей:", error);
-    res.status(500).send({
-      message: error.message || "Ошибка при получении суммы платежей",
-    });
+    res
+      .status(500)
+      .send({
+        message: error.message || "Ошибка при получении суммы платежей",
+      });
   }
 });
 
