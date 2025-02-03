@@ -71,28 +71,24 @@ router.get("/paymentsList", async (req, res) => {
 
 // Эндпоинт для получения суммы платежей
 router.post("/get-payment-sum", async (req, res) => {
-  const token = req.body.token; // Предполагаем, что токен передается в теле запроса
+  const authHeader = req.headers.authorization; // Получаем заголовок авторизации
 
-  if (!token) {
-    return res.status(400).send("Токен не предоставлен");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res
+      .status(401)
+      .json({ message: "Токен не предоставлен или неверен" });
   }
 
+  const token = authHeader.split(" ")[1]; // Извлекаем токен из заголовка
+
   try {
-    const userId = await getUserIdByToken(token);
+    // Логика для обработки платежа
+    const totalAmount = await calculatePaymentSum(token); // Пример функции
 
-    // Запрос для получения суммы платежей
-    const [rows] = await connection
-      .promise()
-      .query(
-        "SELECT SUM(amount) AS totalAmount FROM payments WHERE user_id = ?",
-        [userId]
-      );
-
-    const totalAmount = rows[0].totalAmount || 0; // Если нет платежей, возвращаем 0
     res.json({ totalAmount });
   } catch (error) {
-    console.error("Ошибка при обработке запроса:", error);
-    res.status(500).send("Ошибка при обработке запроса");
+    console.error("Ошибка при получении суммы платежей:", error);
+    res.status(500).json({ message: "Ошибка сервера" });
   }
 });
 
