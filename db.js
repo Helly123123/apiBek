@@ -5,8 +5,18 @@ const connection = mysql.createPool({
   host: process.env.MYSQL_HOST,
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE, // Добавлено
   port: process.env.MYSQL_PORT,
   connectionLimit: 10,
+});
+
+// Проверка подключения
+connection.getConnection((err) => {
+  if (err) {
+    console.error("Ошибка при подключении к базе данных:", err);
+  } else {
+    console.log("Подключение к базе данных успешно!");
+  }
 });
 
 // Функция для создания базы данных и таблицы (если их нет)
