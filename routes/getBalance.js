@@ -23,7 +23,7 @@ const getUserIdByToken = async (token) => {
 };
 
 // Эндпоинт для получения суммы платежей
-router.post("/get-payment-sum", async (req, res) => {
+router.post("/api/get-payment-sum", async (req, res) => {
   const token = req.body.token; // Предполагаем, что токен передается в теле запроса
 
   if (!token) {
