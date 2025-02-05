@@ -22,7 +22,7 @@ const getUserIdByToken = async (token) => {
   }
 };
 
-router.get("/paymentsList", async (req, res) => {
+router.get("/api/paymentsList", async (req, res) => {
   const authHeader = req.headers["authorization"];
   let token;
   console.log("Полный заголовок Authorization:", authHeader);
@@ -70,7 +70,7 @@ router.get("/paymentsList", async (req, res) => {
 });
 
 // Метод для получения суммы платежей
-router.post("/get-payment-sum", async (req, res) => {
+router.post("/api/get-payment-sum", async (req, res) => {
   const authHeader = req.headers.authorization; // Получаем заголовок авторизации
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
